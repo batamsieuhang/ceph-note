@@ -1,0 +1,74 @@
+---
+# tasks file for common
+- name: Create a directory if it does not exist
+  ansible.builtin.file:
+    path: /warp
+    state: directory
+    mode: '0755'
+
+- name: Example clone of a single branch
+  ansible.builtin.git:
+    repo: https://github.com/minio/warp.git
+    dest: /warp/
+    single_branch: yes
+    version: master
+
+- name: Update and upgrade apt packages
+  become: true
+  apt:
+    upgrade: yes
+    update_cache: yes
+    cache_valid_time: 86400  # One day
+
+- name: Ensure dependencies are installed
+  apt:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - curl
+    - tar
+
+- name: Download Go tarball
+  ansible.builtin.get_url:
+    url: "{{ go_url }}"
+    dest: "/tmp/{{ go_tarball }}"
+    mode: '0644'
+
+- name: Remove any existing Go installation
+  ansible.builtin.file:
+    path: "{{ go_install_dir }}/go"
+    state: absent
+    force: yes
+
+- name: Extract Go tarball
+  ansible.builtin.unarchive:
+    src: "/tmp/{{ go_tarball }}"
+    dest: "{{ go_install_dir }}"
+    remote_src: yes
+
+- name: Create Go bin directory
+  ansible.builtin.file:
+    path: "/usr/local/bin"
+    state: directory
+
+- name: Add Go to PATH
+  copy:
+    dest: /etc/profile.d/go.sh
+    content: |
+      export PATH=$PATH:/usr/local/go/bin
+      export GOPATH=$HOME/go
+      export PATH=$PATH:$GOPATH/bin
+    mode: '0755'
+
+- name: Source Go environment variables
+  shell: source /etc/profile.d/go.sh
+  args:
+    executable: /bin/bash
+
+- name: Build Go application
+  shell: |
+        source /etc/profile.d/go.sh
+        cd {{ go_app_dir }}
+        go build
+  args:
+    executable: /bin/bash

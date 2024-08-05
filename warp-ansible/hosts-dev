@@ -1,0 +1,6 @@
+[cloud]
+linode ansible_host=host
+linode ansible_user=root
+linode ansible_password=pass
+
+

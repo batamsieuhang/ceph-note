@@ -1,0 +1,6 @@
+- name: install docker
+  hosts: cloud
+  become: true
+  gather_facts: true
+  roles:
+    - warp-client
